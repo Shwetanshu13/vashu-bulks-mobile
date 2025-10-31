@@ -1,20 +1,52 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useEffect } from "react";
+import { NavigationContainer } from "@react-navigation/native";
+import { StatusBar } from "expo-status-bar";
+import { AuthProvider, useAuth } from "./src/contexts/AuthContext";
+import AuthScreen from "./src/screens/AuthScreen";
+import DashboardScreen from "./src/screens/DashboardScreen";
+import { ActivityIndicator, View, StyleSheet } from "react-native";
+import { colors } from "./src/constants/theme";
+import { logConfigStatus } from "./src/lib/validateConfig";
+
+function AppNavigator() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
+  return (
+    <>
+      <StatusBar style="light" />
+      {user ? <DashboardScreen /> : <AuthScreen />}
+    </>
+  );
+}
 
 export default function App() {
+  useEffect(() => {
+    // Validate configuration on app startup
+    logConfigStatus();
+  }, []);
+
   return (
-    <View style={styles.container}>
-      <Text>Open up App.tsx to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
+    <AuthProvider>
+      <NavigationContainer>
+        <AppNavigator />
+      </NavigationContainer>
+    </AuthProvider>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  loadingContainer: {
     flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: colors.background,
   },
 });
