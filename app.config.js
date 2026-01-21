@@ -26,6 +26,7 @@ export default {
             edgeToEdgeEnabled: true,
             predictiveBackGestureEnabled: false,
             package: 'com.vashubulks.mobile',
+            "newArchEnabled": false
         },
         web: {
             favicon: './assets/favicon.png',
