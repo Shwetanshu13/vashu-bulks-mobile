@@ -26,8 +26,9 @@ export default {
             edgeToEdgeEnabled: true,
             predictiveBackGestureEnabled: false,
             package: 'com.vashubulks.mobile',
-            "newArchEnabled": false
+            newArchEnabled: false
         },
+        plugins: ["expo-system-ui"],
         web: {
             favicon: './assets/favicon.png',
         },
