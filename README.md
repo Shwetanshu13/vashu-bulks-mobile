@@ -59,7 +59,7 @@ Vashu Bulks mobile app brings the power of intelligent nutrition tracking to you
 - **[Appwrite](https://appwrite.io/)** - Backend as a Service for auth and database
 - **[Google Gemini AI](https://ai.google.dev/)** - AI meal analysis
 - **[React Navigation](https://reactnavigation.org/)** - Navigation library
-- **[React Native Calendars](https://github.com/wix/react-native-calendars)** - Calendar component
+- **Custom calendar grid** - In-app month calendar (no external calendar dependency)
 - **[AsyncStorage](https://react-native-async-storage.github.io/async-storage/)** - Local data persistence
 
 ---

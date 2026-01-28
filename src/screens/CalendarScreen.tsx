@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -7,7 +7,6 @@ import {
   ActivityIndicator,
   TouchableOpacity,
 } from "react-native";
-import { Calendar } from "react-native-calendars";
 import {
   getAllUserMeals,
   aggregateMealsByDate,
@@ -17,6 +16,27 @@ import { useAuth } from "../contexts/AuthContext";
 import { colors, spacing, borderRadius, fontSize } from "../constants/theme";
 import { useFocusEffect } from "@react-navigation/native";
 
+const pad2 = (n: number) => String(n).padStart(2, "0");
+
+const formatDateISO = (date: Date) => {
+  const year = date.getFullYear();
+  const month = pad2(date.getMonth() + 1);
+  const day = pad2(date.getDate());
+  return `${year}-${month}-${day}`;
+};
+
+const startOfMonth = (date: Date) =>
+  new Date(date.getFullYear(), date.getMonth(), 1);
+
+const addMonths = (date: Date, months: number) =>
+  new Date(date.getFullYear(), date.getMonth() + months, 1);
+
+const monthLabel = (date: Date) =>
+  date.toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+  });
+
 export default function CalendarScreen() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -25,6 +45,9 @@ export default function CalendarScreen() {
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedDayData, setSelectedDayData] = useState<any>(null);
   const [markedDates, setMarkedDates] = useState<Record<string, any>>({});
+  const [currentMonth, setCurrentMonth] = useState<Date>(
+    startOfMonth(new Date()),
+  );
 
   const loadData = async () => {
     if (!user) return;
@@ -41,7 +64,7 @@ export default function CalendarScreen() {
 
       // Create marked dates for calendar
       const marked: any = {};
-      const today = new Date().toISOString().split("T")[0];
+      const today = formatDateISO(new Date());
 
       Object.keys(aggregated).forEach((date) => {
         if (date > today) return; // Skip future dates
@@ -79,17 +102,74 @@ export default function CalendarScreen() {
   useFocusEffect(
     useCallback(() => {
       loadData();
-    }, [user])
+    }, [user]),
   );
 
-  const handleDayPress = (day: any) => {
-    const date = day.dateString;
-    const today = new Date().toISOString().split("T")[0];
+  const handleDayPress = (date: string) => {
+    const today = formatDateISO(new Date());
 
     if (date > today) return; // Don't allow future dates
 
     setSelectedDate(date);
     setSelectedDayData(mealData[date] || null);
+  };
+
+  const renderCalendarGrid = () => {
+    const todayISO = formatDateISO(new Date());
+    const monthStart = startOfMonth(currentMonth);
+    const daysInMonth = new Date(
+      monthStart.getFullYear(),
+      monthStart.getMonth() + 1,
+      0,
+    ).getDate();
+    const firstWeekday = monthStart.getDay(); // 0=Sun
+
+    const cells: React.ReactElement[] = [];
+    for (let i = 0; i < firstWeekday; i++) {
+      cells.push(<View key={`empty-${i}`} style={styles.dayCell} />);
+    }
+
+    for (let dayNumber = 1; dayNumber <= daysInMonth; dayNumber++) {
+      const dateObj = new Date(
+        monthStart.getFullYear(),
+        monthStart.getMonth(),
+        dayNumber,
+      );
+      const dateISO = formatDateISO(dateObj);
+      const isFuture = dateISO > todayISO;
+      const isSelected = selectedDate === dateISO;
+      const mark = markedDates[dateISO];
+      const dotColor = mark?.dotColor;
+
+      cells.push(
+        <TouchableOpacity
+          key={dateISO}
+          style={[
+            styles.dayCell,
+            isSelected && styles.dayCellSelected,
+            isFuture && styles.dayCellDisabled,
+          ]}
+          onPress={() => handleDayPress(dateISO)}
+          disabled={isFuture}
+          activeOpacity={0.8}
+        >
+          <Text
+            style={[
+              styles.dayText,
+              isSelected && styles.dayTextSelected,
+              isFuture && styles.dayTextDisabled,
+            ]}
+          >
+            {dayNumber}
+          </Text>
+          {!!dotColor && !isSelected && (
+            <View style={[styles.dayDot, { backgroundColor: dotColor }]} />
+          )}
+        </TouchableOpacity>,
+      );
+    }
+
+    return <View style={styles.grid}>{cells}</View>;
   };
 
   const calculateDifference = (actual: number, target: number) => {
@@ -109,29 +189,49 @@ export default function CalendarScreen() {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.calendarCard}>
-        <Calendar
-          onDayPress={handleDayPress}
-          markedDates={{
-            ...markedDates,
-            [selectedDate]: {
-              ...markedDates[selectedDate],
-              selected: true,
-              selectedColor: colors.primary,
-            },
-          }}
-          maxDate={new Date().toISOString().split("T")[0]}
-          theme={{
-            calendarBackground: colors.card,
-            textSectionTitleColor: colors.textMuted,
-            selectedDayBackgroundColor: colors.primary,
-            selectedDayTextColor: colors.text,
-            todayTextColor: colors.primary,
-            dayTextColor: colors.text,
-            textDisabledColor: colors.textMuted,
-            monthTextColor: colors.text,
-            textMonthFontWeight: "600",
-          }}
-        />
+        <View style={styles.calendarHeader}>
+          <TouchableOpacity
+            style={styles.monthNavButton}
+            onPress={() => setCurrentMonth((m) => addMonths(m, -1))}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.monthNavText}>‹</Text>
+          </TouchableOpacity>
+
+          <Text style={styles.monthTitle}>{monthLabel(currentMonth)}</Text>
+
+          <TouchableOpacity
+            style={styles.monthNavButton}
+            onPress={() => setCurrentMonth((m) => addMonths(m, 1))}
+            disabled={
+              startOfMonth(addMonths(currentMonth, 1)).getTime() >
+              startOfMonth(new Date()).getTime()
+            }
+            activeOpacity={0.8}
+          >
+            <Text
+              style={[
+                styles.monthNavText,
+                startOfMonth(addMonths(currentMonth, 1)).getTime() >
+                startOfMonth(new Date()).getTime()
+                  ? styles.monthNavTextDisabled
+                  : null,
+              ]}
+            >
+              ›
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.weekdays}>
+          {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
+            <Text key={d} style={styles.weekdayText}>
+              {d}
+            </Text>
+          ))}
+        </View>
+
+        {renderCalendarGrid()}
 
         <View style={styles.legend}>
           <View style={styles.legendItem}>
@@ -185,7 +285,7 @@ export default function CalendarScreen() {
                     (
                     {calculateDifference(
                       selectedDayData.calories,
-                      requirements.targetCalories
+                      requirements.targetCalories,
                     )}
                     )
                   </Text>
@@ -211,7 +311,7 @@ export default function CalendarScreen() {
                     (
                     {calculateDifference(
                       selectedDayData.protein,
-                      requirements.targetProtein
+                      requirements.targetProtein,
                     )}
                     g)
                   </Text>
@@ -237,7 +337,7 @@ export default function CalendarScreen() {
                     (
                     {calculateDifference(
                       selectedDayData.fats,
-                      requirements.targetFats
+                      requirements.targetFats,
                     )}
                     g)
                   </Text>
@@ -263,7 +363,7 @@ export default function CalendarScreen() {
                     (
                     {calculateDifference(
                       selectedDayData.carbs,
-                      requirements.targetCarbs
+                      requirements.targetCarbs,
                     )}
                     g)
                   </Text>
@@ -326,6 +426,86 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     overflow: "hidden",
+  },
+  calendarHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  monthTitle: {
+    fontSize: fontSize.md,
+    fontWeight: "600",
+    color: colors.text,
+  },
+  monthNavButton: {
+    width: 36,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 18,
+    backgroundColor: colors.cardLight,
+  },
+  monthNavText: {
+    fontSize: 22,
+    color: colors.text,
+    marginTop: -2,
+  },
+  monthNavTextDisabled: {
+    color: colors.textMuted,
+  },
+  weekdays: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  weekdayText: {
+    width: "14.2857%",
+    textAlign: "center",
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    fontWeight: "600",
+  },
+  grid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.md,
+  },
+  dayCell: {
+    width: "14.2857%",
+    aspectRatio: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: borderRadius.md,
+  },
+  dayCellSelected: {
+    backgroundColor: colors.primary,
+  },
+  dayCellDisabled: {
+    opacity: 0.35,
+  },
+  dayText: {
+    fontSize: fontSize.sm,
+    color: colors.text,
+    fontWeight: "500",
+  },
+  dayTextSelected: {
+    color: colors.text,
+    fontWeight: "700",
+  },
+  dayTextDisabled: {
+    color: colors.textMuted,
+  },
+  dayDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginTop: 4,
   },
   legend: {
     flexDirection: "row",

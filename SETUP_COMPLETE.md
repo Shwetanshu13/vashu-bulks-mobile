@@ -25,7 +25,6 @@ Your React Native Expo mobile app for Vashu Bulks is now ready! Here's what has 
 
 - react-native-appwrite
 - @google/generative-ai
-- react-native-calendars
 - @react-native-async-storage/async-storage
 - @react-navigation/native
 - @react-navigation/bottom-tabs
