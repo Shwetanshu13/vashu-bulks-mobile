@@ -16,5 +16,7 @@ export const MEALS_COLLECTION_ID =
   Constants.expoConfig?.extra?.appwriteMealsCollectionId || "";
 export const REQUIREMENTS_COLLECTION_ID =
   Constants.expoConfig?.extra?.appwriteRequirementsCollectionId || "";
+export const SAVED_MEALS_COLLECTION_ID =
+  Constants.expoConfig?.extra?.appwriteSavedMealsCollectionId || "";
 
 export { ID, Query };

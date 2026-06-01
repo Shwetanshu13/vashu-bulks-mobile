@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -9,10 +9,11 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Switch,
 } from "react-native";
-import { logMeal } from "../lib/database";
-import { useAuth } from "../contexts/AuthContext";
-import { colors, spacing, borderRadius, fontSize } from "../constants/theme";
+import { logMeal, getSavedMeals, saveMealAsTemplate } from "@/lib/database";
+import { useAuth } from "@/contexts/AuthContext";
+import { colors, spacing, borderRadius, fontSize } from "@/constants/theme";
 
 export default function ManualMealScreen({ navigation }: any) {
   const { user } = useAuth();
@@ -22,6 +23,14 @@ export default function ManualMealScreen({ navigation }: any) {
   const [fats, setFats] = useState("");
   const [carbs, setCarbs] = useState("");
   const [loading, setLoading] = useState(false);
+  const [savedMeals, setSavedMeals] = useState<any[]>([]);
+  const [saveAsTemplate, setSaveAsTemplate] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      getSavedMeals(user.$id).then(setSavedMeals).catch(console.error);
+    }
+  }, [user]);
 
   const handleSubmit = async () => {
     if (!mealName || !calories || !protein || !fats || !carbs) {
@@ -44,6 +53,20 @@ export default function ManualMealScreen({ navigation }: any) {
         carbs: parseFloat(carbs),
         isAIcalculated: false,
       });
+
+      if (saveAsTemplate) {
+        await saveMealAsTemplate(user.$id, {
+          mealName,
+          calories: parseInt(calories),
+          protein: parseFloat(protein),
+          fats: parseFloat(fats),
+          carbs: parseFloat(carbs),
+          isAIcalculated: false,
+        });
+        const updated = await getSavedMeals(user.$id);
+        setSavedMeals(updated);
+        setSaveAsTemplate(false);
+      }
 
       Alert.alert("Success", "Meal logged successfully!", [
         {
@@ -74,6 +97,29 @@ export default function ManualMealScreen({ navigation }: any) {
         <View style={styles.card}>
           <Text style={styles.title}>Log Meal Manually</Text>
           <Text style={styles.subtitle}>Enter the nutritional information</Text>
+
+          {savedMeals.length > 0 && (
+            <View style={styles.savedMealsContainer}>
+              <Text style={styles.label}>Load Saved Meal</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.savedMealsScroll}>
+                {savedMeals.map((sm) => (
+                  <TouchableOpacity
+                    key={sm.$id}
+                    style={styles.savedMealPill}
+                    onPress={() => {
+                      setMealName(sm.mealName);
+                      setCalories(sm.calories.toString());
+                      setProtein(sm.protein.toString());
+                      setFats(sm.fats.toString());
+                      setCarbs(sm.carbs.toString());
+                    }}
+                  >
+                    <Text style={styles.savedMealText}>{sm.mealName}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Meal Name</Text>
@@ -132,6 +178,16 @@ export default function ManualMealScreen({ navigation }: any) {
               onChangeText={setCarbs}
               keyboardType="decimal-pad"
             />
+          </View>
+
+          <View style={styles.switchContainer}>
+            <Switch
+              value={saveAsTemplate}
+              onValueChange={setSaveAsTemplate}
+              trackColor={{ false: colors.border, true: colors.success }}
+              thumbColor={Platform.OS === 'ios' ? '#FFFFFF' : (saveAsTemplate ? '#FFFFFF' : '#f4f3f4')}
+            />
+            <Text style={styles.switchLabel}>Save this meal for future use</Text>
           </View>
 
           <TouchableOpacity
@@ -208,5 +264,36 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: fontSize.md,
     fontWeight: "600",
+  },
+  savedMealsContainer: {
+    marginBottom: spacing.md,
+  },
+  savedMealsScroll: {
+    flexDirection: "row",
+    marginTop: spacing.xs,
+  },
+  savedMealPill: {
+    backgroundColor: colors.cardLight,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginRight: spacing.sm,
+  },
+  savedMealText: {
+    color: colors.text,
+    fontSize: fontSize.sm,
+  },
+  switchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: spacing.md,
+    marginTop: spacing.xs,
+  },
+  switchLabel: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    marginLeft: spacing.sm,
   },
 });

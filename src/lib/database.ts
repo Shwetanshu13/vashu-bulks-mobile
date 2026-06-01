@@ -3,6 +3,7 @@ import {
   DATABASE_ID,
   MEALS_COLLECTION_ID,
   REQUIREMENTS_COLLECTION_ID,
+  SAVED_MEALS_COLLECTION_ID,
   ID,
   Query,
 } from "./appwrite";
@@ -210,4 +211,69 @@ export const aggregateMealsByDate = (meals: any[]) => {
   });
 
   return aggregated;
+};
+
+export const saveMealAsTemplate = async (userId: string, mealData: any) => {
+  try {
+    if (!DATABASE_ID || !SAVED_MEALS_COLLECTION_ID) {
+      throw new Error("Database configuration missing.");
+    }
+    const created = await databases.createDocument(
+      DATABASE_ID,
+      SAVED_MEALS_COLLECTION_ID,
+      ID.unique(),
+      {
+        userId,
+        mealName: mealData.mealName,
+        calories: mealData.calories,
+        protein: mealData.protein,
+        fats: mealData.fats,
+        carbs: mealData.carbs,
+        isAIcalculated: mealData.isAIcalculated || false
+      },
+      [
+        Permission.read(Role.user(userId)),
+        Permission.update(Role.user(userId)),
+        Permission.delete(Role.user(userId)),
+      ]
+    );
+    return created;
+  } catch (error: any) {
+    console.error("Failed to save meal as template:", error.message || error);
+    throw error;
+  }
+};
+
+export const getSavedMeals = async (userId: string) => {
+  try {
+    if (!DATABASE_ID || !SAVED_MEALS_COLLECTION_ID) {
+      return [];
+    }
+    const response = await databases.listDocuments(
+      DATABASE_ID,
+      SAVED_MEALS_COLLECTION_ID,
+      [Query.equal("userId", userId), Query.limit(100)]
+    );
+    return response.documents;
+  } catch (error: any) {
+    console.error("Failed to get saved meals:", error.message || error);
+    return [];
+  }
+};
+
+export const deleteSavedMeal = async (mealId: string) => {
+  try {
+    if (!DATABASE_ID || !SAVED_MEALS_COLLECTION_ID) {
+      throw new Error("Database configuration missing.");
+    }
+    await databases.deleteDocument(
+      DATABASE_ID,
+      SAVED_MEALS_COLLECTION_ID,
+      mealId
+    );
+    return true;
+  } catch (error: any) {
+    console.error("Failed to delete saved meal:", error.message || error);
+    throw error;
+  }
 };

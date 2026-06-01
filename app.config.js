@@ -38,6 +38,7 @@ export default {
             appwriteDatabaseId: process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID,
             appwriteMealsCollectionId: process.env.NEXT_PUBLIC_APPWRITE_MEALS_COLLECTION_ID,
             appwriteRequirementsCollectionId: process.env.NEXT_PUBLIC_APPWRITE_REQUIREMENTS_COLLECTION_ID,
+            appwriteSavedMealsCollectionId: process.env.NEXT_PUBLIC_APPWRITE_SAVED_MEALS_COLLECTION_ID,
             geminiApiKey: process.env.GEMINI_API_KEY,
             "eas": {
                 "projectId": "4eb0895f-17ee-4d3d-b94f-81e89d0f1122"

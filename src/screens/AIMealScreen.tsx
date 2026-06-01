@@ -10,11 +10,12 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Switch,
 } from "react-native";
-import { analyzeMeal } from "../lib/gemini";
-import { logMeal } from "../lib/database";
-import { useAuth } from "../contexts/AuthContext";
-import { colors, spacing, borderRadius, fontSize } from "../constants/theme";
+import { analyzeMeal } from "@/lib/gemini";
+import { logMeal, saveMealAsTemplate } from "@/lib/database";
+import { useAuth } from "@/contexts/AuthContext";
+import { colors, spacing, borderRadius, fontSize } from "@/constants/theme";
 
 export default function AIMealScreen({ navigation }: any) {
   const { user } = useAuth();
@@ -23,6 +24,7 @@ export default function AIMealScreen({ navigation }: any) {
   const [analyzed, setAnalyzed] = useState(false);
   const [mealData, setMealData] = useState<any>(null);
   const [saving, setSaving] = useState(false);
+  const [saveAsTemplate, setSaveAsTemplate] = useState(false);
 
   const handleAnalyze = async () => {
     if (!description.trim()) {
@@ -58,6 +60,18 @@ export default function AIMealScreen({ navigation }: any) {
         carbs: mealData.carbs,
         isAIcalculated: true,
       });
+
+      if (saveAsTemplate) {
+        await saveMealAsTemplate(user.$id, {
+          mealName: mealData.mealName,
+          calories: mealData.calories,
+          protein: mealData.protein,
+          fats: mealData.fats,
+          carbs: mealData.carbs,
+          isAIcalculated: true,
+        });
+        setSaveAsTemplate(false);
+      }
 
       Alert.alert("Success", "Meal logged successfully!", [
         {
@@ -169,6 +183,16 @@ export default function AIMealScreen({ navigation }: any) {
                     <Text style={styles.nutrientUnit}>g</Text>
                   </View>
                 </View>
+              </View>
+
+              <View style={styles.switchContainer}>
+                <Switch
+                  value={saveAsTemplate}
+                  onValueChange={setSaveAsTemplate}
+                  trackColor={{ false: colors.border, true: colors.success }}
+                  thumbColor={Platform.OS === 'ios' ? '#FFFFFF' : (saveAsTemplate ? '#FFFFFF' : '#f4f3f4')}
+                />
+                <Text style={styles.switchLabel}>Save this meal for future use</Text>
               </View>
 
               <View style={styles.buttonRow}>
@@ -315,5 +339,16 @@ const styles = StyleSheet.create({
   buttonRow: {
     flexDirection: "row",
     marginTop: spacing.md,
+  },
+  switchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: spacing.md,
+    marginTop: spacing.sm,
+  },
+  switchLabel: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    marginLeft: spacing.sm,
   },
 });
