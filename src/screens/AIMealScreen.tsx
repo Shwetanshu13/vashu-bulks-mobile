@@ -12,6 +12,7 @@ import {
   Platform,
   Switch,
 } from "react-native";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { analyzeMeal } from "@/lib/gemini";
 import { logMeal, saveMealAsTemplate } from "@/lib/database";
 import { useAuth } from "@/contexts/AuthContext";
@@ -25,6 +26,15 @@ export default function AIMealScreen({ navigation }: any) {
   const [mealData, setMealData] = useState<any>(null);
   const [saving, setSaving] = useState(false);
   const [saveAsTemplate, setSaveAsTemplate] = useState(false);
+  const [date, setDate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
+  const onChangeDate = (event: any, selectedDate?: Date) => {
+    setShowDatePicker(Platform.OS === "ios");
+    if (selectedDate) {
+      setDate(selectedDate);
+    }
+  };
 
   const handleAnalyze = async () => {
     if (!description.trim()) {
@@ -49,10 +59,10 @@ export default function AIMealScreen({ navigation }: any) {
 
     setSaving(true);
     try {
-      const today = new Date().toISOString().split("T")[0];
+      const formattedDate = date.toISOString().split("T")[0];
       await logMeal({
         userId: user.$id,
-        date: today,
+        date: formattedDate,
         mealName: mealData.mealName,
         calories: mealData.calories,
         protein: mealData.protein,
@@ -95,6 +105,7 @@ export default function AIMealScreen({ navigation }: any) {
     setDescription("");
     setMealData(null);
     setAnalyzed(false);
+    setDate(new Date());
   };
 
   return (
@@ -111,6 +122,42 @@ export default function AIMealScreen({ navigation }: any) {
 
           {!analyzed ? (
             <>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Date</Text>
+                {Platform.OS === "ios" ? (
+                  <View style={styles.datePickerContainerIOS}>
+                    <DateTimePicker
+                      value={date}
+                      mode="date"
+                      display="default"
+                      onChange={onChangeDate}
+                      maximumDate={new Date()}
+                      themeVariant="dark"
+                    />
+                  </View>
+                ) : (
+                  <>
+                    <TouchableOpacity
+                      style={styles.input}
+                      onPress={() => setShowDatePicker(true)}
+                    >
+                      <Text style={{ color: colors.text }}>
+                        {date.toLocaleDateString()}
+                      </Text>
+                    </TouchableOpacity>
+                    {showDatePicker && (
+                      <DateTimePicker
+                        value={date}
+                        mode="date"
+                        display="default"
+                        onChange={onChangeDate}
+                        maximumDate={new Date()}
+                      />
+                    )}
+                  </>
+                )}
+              </View>
+
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Meal Description</Text>
                 <TextInput
@@ -273,6 +320,13 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     color: colors.text,
     fontSize: fontSize.md,
+    justifyContent: "center",
+  },
+  datePickerContainerIOS: {
+    backgroundColor: colors.cardLight,
+    borderRadius: borderRadius.md,
+    padding: spacing.sm,
+    alignItems: "flex-start",
   },
   textArea: {
     minHeight: 100,
