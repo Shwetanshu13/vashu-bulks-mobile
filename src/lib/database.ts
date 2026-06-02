@@ -188,6 +188,48 @@ export const getAllUserMeals = async (userId: string) => {
   }
 };
 
+export const updateMeal = async (mealId: string, mealData: Partial<Meal>) => {
+  try {
+    if (!DATABASE_ID || !MEALS_COLLECTION_ID) {
+      throw new Error("Database configuration missing.");
+    }
+    const updated = await databases.updateDocument(
+      DATABASE_ID,
+      MEALS_COLLECTION_ID,
+      mealId,
+      {
+        mealName: mealData.mealName,
+        calories: mealData.calories,
+        protein: mealData.protein,
+        fats: mealData.fats,
+        carbs: mealData.carbs,
+        date: mealData.date,
+      }
+    );
+    return updated;
+  } catch (error: any) {
+    console.error("Failed to update meal:", error.message || error);
+    throw error;
+  }
+};
+
+export const deleteMeal = async (mealId: string) => {
+  try {
+    if (!DATABASE_ID || !MEALS_COLLECTION_ID) {
+      throw new Error("Database configuration missing.");
+    }
+    await databases.deleteDocument(
+      DATABASE_ID,
+      MEALS_COLLECTION_ID,
+      mealId
+    );
+    return true;
+  } catch (error: any) {
+    console.error("Failed to delete meal:", error.message || error);
+    throw error;
+  }
+};
+
 export const aggregateMealsByDate = (meals: any[]) => {
   const aggregated: Record<string, any> = {};
 

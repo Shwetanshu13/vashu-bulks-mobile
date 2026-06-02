@@ -6,8 +6,12 @@ import {
   ScrollView,
   ActivityIndicator,
   RefreshControl,
+  TouchableOpacity,
+  Modal,
+  TextInput,
+  Alert,
 } from "react-native";
-import { getMealsByDate } from "../lib/database";
+import { getMealsByDate, updateMeal, deleteMeal } from "../lib/database";
 import { useAuth } from "../contexts/AuthContext";
 import { colors, spacing, borderRadius, fontSize } from "../constants/theme";
 import { useFocusEffect } from "@react-navigation/native";
@@ -23,6 +27,66 @@ export default function TodayMealsScreen() {
     fats: 0,
     carbs: 0,
   });
+  
+  const [editingMeal, setEditingMeal] = useState<any>(null);
+  const [editFormData, setEditFormData] = useState({
+    mealName: "",
+    calories: "",
+    protein: "",
+    fats: "",
+    carbs: "",
+  });
+
+  const handleEditClick = (meal: any) => {
+    setEditingMeal(meal);
+    setEditFormData({
+      mealName: meal.mealName,
+      calories: meal.calories.toString(),
+      protein: meal.protein.toString(),
+      fats: meal.fats.toString(),
+      carbs: meal.carbs.toString(),
+    });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingMeal) return;
+    try {
+      await updateMeal(editingMeal.$id, {
+        mealName: editFormData.mealName,
+        calories: parseInt(editFormData.calories) || 0,
+        protein: parseFloat(editFormData.protein) || 0,
+        fats: parseFloat(editFormData.fats) || 0,
+        carbs: parseFloat(editFormData.carbs) || 0,
+        date: editingMeal.date,
+      });
+      setEditingMeal(null);
+      loadMeals();
+    } catch (error) {
+      Alert.alert("Error", "Failed to update meal.");
+    }
+  };
+
+  const handleDelete = (mealId: string) => {
+    Alert.alert(
+      "Delete Meal",
+      "Are you sure you want to delete this meal?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteMeal(mealId);
+              loadMeals();
+            } catch (error) {
+              Alert.alert("Error", "Failed to delete meal.");
+            }
+          },
+        },
+      ]
+    );
+  };
 
   const loadMeals = async () => {
     if (!user) return;
@@ -129,12 +193,22 @@ export default function TodayMealsScreen() {
           meals.map((meal, index) => (
             <View key={meal.$id || index} style={styles.mealCard}>
               <View style={styles.mealHeader}>
-                <Text style={styles.mealName}>{meal.mealName}</Text>
-                {meal.isAIcalculated && (
-                  <View style={styles.aiBadge}>
-                    <Text style={styles.aiBadgeText}>🤖 AI</Text>
-                  </View>
-                )}
+                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
+                  <Text style={styles.mealName}>{meal.mealName}</Text>
+                  {meal.isAIcalculated && (
+                    <View style={styles.aiBadge}>
+                      <Text style={styles.aiBadgeText}>🤖 AI</Text>
+                    </View>
+                  )}
+                </View>
+                <View style={{ flexDirection: 'row', gap: 10 }}>
+                  <TouchableOpacity onPress={() => handleEditClick(meal)}>
+                    <Text style={{ color: colors.info, fontSize: fontSize.sm }}>Edit</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => handleDelete(meal.$id)}>
+                    <Text style={{ color: colors.error, fontSize: fontSize.sm }}>Delete</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
               <View style={styles.mealNutrients}>
                 <View style={styles.nutrientItem}>
@@ -172,6 +246,80 @@ export default function TodayMealsScreen() {
           ))
         )}
       </View>
+
+      <Modal visible={!!editingMeal} animationType="slide" transparent={true}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Edit Meal</Text>
+            
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Meal Name</Text>
+              <TextInput
+                style={styles.input}
+                value={editFormData.mealName}
+                onChangeText={(text) => setEditFormData({ ...editFormData, mealName: text })}
+              />
+            </View>
+            
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 10 }}>
+              <View style={[styles.inputGroup, { flex: 1 }]}>
+                <Text style={styles.label}>Calories</Text>
+                <TextInput
+                  style={styles.input}
+                  keyboardType="numeric"
+                  value={editFormData.calories}
+                  onChangeText={(text) => setEditFormData({ ...editFormData, calories: text })}
+                />
+              </View>
+              <View style={[styles.inputGroup, { flex: 1 }]}>
+                <Text style={styles.label}>Protein</Text>
+                <TextInput
+                  style={styles.input}
+                  keyboardType="numeric"
+                  value={editFormData.protein}
+                  onChangeText={(text) => setEditFormData({ ...editFormData, protein: text })}
+                />
+              </View>
+            </View>
+
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 10 }}>
+              <View style={[styles.inputGroup, { flex: 1 }]}>
+                <Text style={styles.label}>Fats</Text>
+                <TextInput
+                  style={styles.input}
+                  keyboardType="numeric"
+                  value={editFormData.fats}
+                  onChangeText={(text) => setEditFormData({ ...editFormData, fats: text })}
+                />
+              </View>
+              <View style={[styles.inputGroup, { flex: 1 }]}>
+                <Text style={styles.label}>Carbs</Text>
+                <TextInput
+                  style={styles.input}
+                  keyboardType="numeric"
+                  value={editFormData.carbs}
+                  onChangeText={(text) => setEditFormData({ ...editFormData, carbs: text })}
+                />
+              </View>
+            </View>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: colors.cardLight }]}
+                onPress={() => setEditingMeal(null)}
+              >
+                <Text style={{ color: colors.text }}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: colors.success }]}
+                onPress={handleSaveEdit}
+              >
+                <Text style={{ color: colors.text }}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -296,5 +444,54 @@ const styles = StyleSheet.create({
   nutrientValue: {
     fontSize: fontSize.md,
     fontWeight: "600",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.md,
+  },
+  modalContent: {
+    backgroundColor: colors.card,
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
+    width: '100%',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  modalTitle: {
+    fontSize: fontSize.xl,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: spacing.md,
+    textAlign: 'center',
+  },
+  inputGroup: {
+    marginBottom: spacing.md,
+  },
+  label: {
+    fontSize: fontSize.sm,
+    color: colors.textMuted,
+    marginBottom: spacing.xs,
+  },
+  input: {
+    backgroundColor: colors.cardLight,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    color: colors.text,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: spacing.md,
+    marginTop: spacing.sm,
+  },
+  modalButton: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.md,
   },
 });
